@@ -16,6 +16,7 @@
 		AA000007 /* GridOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100007; };
 		AA000008 /* PreferencesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100008; };
 		AA000009 /* HotkeyRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000B; };
+		AA00000A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA10000C; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +31,7 @@
 		AA100009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA10000A /* GridSnap.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GridSnap.entitlements; sourceTree = "<group>"; };
 		AA10000B /* HotkeyRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyRecorderView.swift; sourceTree = "<group>"; };
+		AA10000C /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA200001 /* GridSnap.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GridSnap.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -64,6 +66,7 @@
 				AA100007 /* GridOverlayView.swift */,
 				AA100008 /* PreferencesView.swift */,
 				AA10000B /* HotkeyRecorderView.swift */,
+				AA10000C /* Assets.xcassets */,
 				AA100009 /* Info.plist */,
 				AA10000A /* GridSnap.entitlements */,
 			);
@@ -87,6 +90,7 @@
 			buildPhases = (
 				AA600001 /* Sources */,
 				AA300001 /* Frameworks */,
+				AA600002 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -124,6 +128,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA600002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA00000A /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		AA600001 /* Sources */ = {
