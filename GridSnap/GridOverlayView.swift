@@ -117,6 +117,7 @@ class GridTrackingNSView: NSView {
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
 
+        guard rows > 0, columns > 0 else { return }
         let cellW = bounds.width / CGFloat(columns)
         let cellH = bounds.height / CGFloat(rows)
 
@@ -158,6 +159,7 @@ class GridTrackingNSView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        isDragging = false // reset any stuck state
         isDragging = true
         let (r, c) = cellAt(event)
         onDragStart?(r, c)
@@ -178,6 +180,7 @@ class GridTrackingNSView: NSView {
 
     private func cellAt(_ event: NSEvent) -> (Int, Int) {
         let pt = convert(event.locationInWindow, from: nil)
+        guard columns > 0, rows > 0, bounds.width > 0, bounds.height > 0 else { return (0, 0) }
         let cellW = bounds.width / CGFloat(columns)
         let cellH = bounds.height / CGFloat(rows)
         // isFlipped is true, so pt.y=0 is top

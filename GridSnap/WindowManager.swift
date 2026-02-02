@@ -28,14 +28,20 @@ enum WindowManager {
             kAXFocusedWindowAttribute as CFString,
             &focusedWindow
         )
-        guard result == .success else { return nil }
+        guard result == .success,
+              CFGetTypeID(focusedWindow) == AXUIElementGetTypeID() else {
+            return nil
+        }
 
+        // Force cast is safe — CFGetTypeID confirmed AXUIElement type above
         let windowElement = focusedWindow as! AXUIElement
         let frame = getWindowFrame(windowElement)
 
-        let screen = NSScreen.screens.first { $0.frame.intersects(frame) }
-            ?? NSScreen.main
-            ?? NSScreen.screens[0]
+        guard let screen = NSScreen.screens.first(where: { $0.frame.intersects(frame) })
+                ?? NSScreen.main
+                ?? NSScreen.screens.first else {
+            return nil
+        }
 
         return WindowInfo(
             appName: app.localizedName ?? "Unknown",
@@ -48,31 +54,58 @@ enum WindowManager {
     static func getWindowFrame(_ element: AXUIElement) -> NSRect {
         var posVal: AnyObject?
         var sizeVal: AnyObject?
-        AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &posVal)
-        AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeVal)
+        let posResult = AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &posVal)
+        let sizeResult = AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeVal)
 
         var position = CGPoint.zero
         var size = CGSize.zero
-        if let pv = posVal { AXValueGetValue(pv as! AXValue, .cgPoint, &position) }
-        if let sv = sizeVal { AXValueGetValue(sv as! AXValue, .cgSize, &size) }
+
+        if posResult == .success,
+           let pv = posVal,
+           CFGetTypeID(pv) == AXValueGetTypeID() {
+            // Force cast is safe here — CFGetTypeID confirmed the type above
+            AXValueGetValue(pv as! AXValue, .cgPoint, &position)
+        }
+        if sizeResult == .success,
+           let sv = sizeVal,
+           CFGetTypeID(sv) == AXValueGetTypeID() {
+            AXValueGetValue(sv as! AXValue, .cgSize, &size)
+        }
 
         return NSRect(origin: position, size: size)
     }
 
-    static func setWindowFrame(_ element: AXUIElement, frame: NSRect) {
+    /// Check if an AXUIElement still refers to a valid, accessible window.
+    static func isValidWindow(_ element: AXUIElement) -> Bool {
+        var roleVal: AnyObject?
+        let result = AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleVal)
+        return result == .success
+    }
+
+    @discardableResult
+    static func setWindowFrame(_ element: AXUIElement, frame: NSRect) -> Bool {
+        guard isValidWindow(element) else { return false }
         var position = frame.origin
         var size = frame.size
+        var success = true
 
         if let posValue = AXValueCreate(.cgPoint, &position) {
-            AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, posValue)
+            let result = AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, posValue)
+            if result != .success { success = false }
+        } else {
+            success = false
         }
         if let sizeValue = AXValueCreate(.cgSize, &size) {
-            AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, sizeValue)
+            let result = AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, sizeValue)
+            if result != .success { success = false }
+        } else {
+            success = false
         }
         // Set size again after position (some windows constrain based on screen)
         if let sizeValue = AXValueCreate(.cgSize, &size) {
             AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, sizeValue)
         }
+        return success
     }
 
     static func calculateTargetFrame(
@@ -81,20 +114,30 @@ enum WindowManager {
         rows: Int,
         columns: Int
     ) -> NSRect {
+        guard rows > 0, columns > 0 else { return screen.visibleFrame }
+
         let visible = screen.visibleFrame
+        guard visible.width > 0, visible.height > 0 else { return screen.visibleFrame }
+
+        // Clamp grid rect to valid bounds
+        let col = max(0, min(columns - 1, gridRect.column))
+        let row = max(0, min(rows - 1, gridRect.row))
+        let w = max(1, min(columns - col, gridRect.width))
+        let h = max(1, min(rows - row, gridRect.height))
+
         let cellW = visible.width / CGFloat(columns)
         let cellH = visible.height / CGFloat(rows)
 
         // AX coordinates: origin top-left of main screen
         // visibleFrame: origin bottom-left
         // Convert: AX y = mainScreenHeight - visibleFrame.maxY + row offset
-        let mainHeight = NSScreen.screens.first?.frame.height ?? visible.height
+        let mainHeight = NSScreen.main?.frame.height ?? visible.height
 
-        let x = visible.minX + CGFloat(gridRect.column) * cellW
-        let y = mainHeight - visible.maxY + CGFloat(gridRect.row) * cellH
-        let w = CGFloat(gridRect.width) * cellW
-        let h = CGFloat(gridRect.height) * cellH
+        let x = visible.minX + CGFloat(col) * cellW
+        let y = mainHeight - visible.maxY + CGFloat(row) * cellH
+        let frameW = CGFloat(w) * cellW
+        let frameH = CGFloat(h) * cellH
 
-        return NSRect(x: x, y: y, width: w, height: h)
+        return NSRect(x: x, y: y, width: frameW, height: frameH)
     }
 }

@@ -21,6 +21,10 @@ class HotkeyRecorderNSView: NSView {
     private var isRecording = false
     private var monitor: Any?
 
+    deinit {
+        stopRecording()
+    }
+
     override var acceptsFirstResponder: Bool { true }
     override var intrinsicContentSize: NSSize { NSSize(width: 200, height: 28) }
 
@@ -66,6 +70,8 @@ class HotkeyRecorderNSView: NSView {
     }
 
     private func startRecording() {
+        // Remove any existing monitor before creating a new one
+        if monitor != nil { stopRecording() }
         isRecording = true
         needsDisplay = true
 
@@ -86,7 +92,7 @@ class HotkeyRecorderNSView: NSView {
 
     private func handleRecordedKey(_ event: NSEvent) {
         // Escape cancels recording
-        if event.keyCode == 53 {
+        if event.keyCode == UInt16(kVK_Escape) {
             stopRecording()
             return
         }
@@ -97,8 +103,13 @@ class HotkeyRecorderNSView: NSView {
 
         let carbonMods = Settings.carbonModifiers(from: mods)
 
-        settings?.hotkeyKeyCode = UInt32(event.keyCode)
-        settings?.hotkeyModifiers = carbonMods
+        guard let settings = settings else {
+            stopRecording()
+            return
+        }
+
+        settings.hotkeyKeyCode = UInt32(event.keyCode)
+        settings.hotkeyModifiers = carbonMods
 
         stopRecording()
 

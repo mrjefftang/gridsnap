@@ -1,4 +1,5 @@
 import Cocoa
+import Carbon.HIToolbox
 
 class OverlayWindow: NSPanel {
 
@@ -30,7 +31,7 @@ class OverlayWindow: NSPanel {
     }
 
     override func keyDown(with event: NSEvent) {
-        if event.keyCode == 53 { // Escape
+        if event.keyCode == UInt16(kVK_Escape) {
             onCancel?()
         } else {
             super.keyDown(with: event)

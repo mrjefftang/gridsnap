@@ -2,11 +2,16 @@ import Cocoa
 import SwiftUI
 import ApplicationServices
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private let hotkeyManager = HotkeyManager()
     private var overlayWindow: OverlayWindow?
     private var savedWindowInfo: WindowInfo?
     private var preferencesWindow: NSWindow?
+    private var isShowingOverlay = false
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         checkAccessibility()
@@ -67,7 +72,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleHotkey() {
-        if overlayWindow != nil {
+        if overlayWindow != nil || isShowingOverlay {
             hideOverlay()
             return
         }
@@ -85,6 +90,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Overlay
 
     private func showOverlay(for info: WindowInfo) {
+        isShowingOverlay = true
         let settings = Settings.shared
         let overlay = OverlayWindow(screen: info.screen)
 
@@ -120,10 +126,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             columns: settings.gridColumns
         )
 
+        // Capture info before hideOverlay() clears savedWindowInfo
+        let windowElement = info.windowElement
         hideOverlay()
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            WindowManager.setWindowFrame(info.windowElement, frame: targetFrame)
+            guard WindowManager.isValidWindow(windowElement) else {
+                NSLog("GridSnap: target window is no longer valid, skipping resize")
+                return
+            }
+            if !WindowManager.setWindowFrame(windowElement, frame: targetFrame) {
+                NSLog("GridSnap: failed to resize window")
+            }
         }
     }
 
@@ -131,6 +145,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         overlayWindow?.hide()
         overlayWindow = nil
         savedWindowInfo = nil
+        isShowingOverlay = false
     }
 
     // MARK: - Preferences
@@ -149,11 +164,20 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             defer: false
         )
         window.isReleasedWhenClosed = false
+        window.delegate = self
         window.title = "GridSnap Preferences"
         window.contentView = NSHostingView(rootView: PreferencesView())
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         preferencesWindow = window
+    }
+
+    // MARK: - NSWindowDelegate
+
+    func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSWindow, window === preferencesWindow {
+            preferencesWindow = nil
+        }
     }
 }
