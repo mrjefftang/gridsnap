@@ -6,7 +6,7 @@ struct GridSnapApp: App {
     @StateObject private var settings = Settings.shared
 
     var body: some Scene {
-        MenuBarExtra("GridSnap", systemImage: "square.grid.3x3") {
+        MenuBarExtra("GridSnap", systemImage: "square.grid.3x3.topleft.filled") {
             Text("Grid: \(settings.gridRows) × \(settings.gridColumns)")
                 .font(.caption)
                 .foregroundColor(.secondary)

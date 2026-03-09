@@ -99,6 +99,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             appIcon: info.appIcon,
             rows: settings.gridRows,
             columns: settings.gridColumns,
+            screen: info.screen,
             onSelection: { [weak self] gridRect in
                 self?.handleSelection(gridRect)
             },

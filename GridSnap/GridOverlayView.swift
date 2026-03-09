@@ -5,6 +5,7 @@ struct GridOverlayView: View {
     let appIcon: NSImage?
     let rows: Int
     let columns: Int
+    let screen: NSScreen
     let onSelection: (GridRect) -> Void
     let onCancel: () -> Void
 
@@ -16,11 +17,52 @@ struct GridOverlayView: View {
         return (min(s.row, c.row), min(s.col, c.col), max(s.row, c.row), max(s.col, c.col))
     }
 
+    /// Compute the preview frame in overlay view coordinates (top-left origin)
+    private var previewFrame: CGRect? {
+        guard let sel = selection else { return nil }
+        let visibleFrame = screen.visibleFrame
+        let screenFrame = screen.frame
+
+        // Convert visible frame to overlay view coordinates (top-left origin)
+        let viewVisibleX = visibleFrame.minX - screenFrame.minX
+        let viewVisibleY = screenFrame.maxY - visibleFrame.maxY
+        let viewVisibleW = visibleFrame.width
+        let viewVisibleH = visibleFrame.height
+
+        let cellW = viewVisibleW / CGFloat(columns)
+        let cellH = viewVisibleH / CGFloat(rows)
+
+        let col = max(0, min(columns - 1, sel.minCol))
+        let row = max(0, min(rows - 1, sel.minRow))
+        let w = max(1, min(columns - col, sel.maxCol - sel.minCol + 1))
+        let h = max(1, min(rows - row, sel.maxRow - sel.minRow + 1))
+
+        return CGRect(
+            x: viewVisibleX + CGFloat(col) * cellW,
+            y: viewVisibleY + CGFloat(row) * cellH,
+            width: CGFloat(w) * cellW,
+            height: CGFloat(h) * cellH
+        )
+    }
+
     var body: some View {
         ZStack {
             // Full-screen dim background — click outside grid cancels
             Color.black.opacity(0.3)
                 .onTapGesture { onCancel() }
+
+            // Preview highlight showing where the window will be placed
+            if let frame = previewFrame {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.blue.opacity(0.15))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.blue.opacity(0.5), lineWidth: 2)
+                    )
+                    .frame(width: frame.width, height: frame.height)
+                    .position(x: frame.midX, y: frame.midY)
+                    .allowsHitTesting(false)
+            }
 
             VStack(spacing: 16) {
                 // Header
